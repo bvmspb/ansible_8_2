@@ -1,29 +1,27 @@
-# Домашнее задание к занятию "08.02 Работа с Playbook"
+# Репозиторий с выполнением домашнего задания к занятию "08.02 Работа с Playbook"
 
-## Подготовка к выполнению
+## Ansible playbook отвечает за установку и запуск Clickhouse и Vector на указанный сервер  
 
-1. (Необязательно) Изучите, что такое [clickhouse](https://www.youtube.com/watch?v=fjTNS2zkeBs) и [vector](https://www.youtube.com/watch?v=CgEhyffisLY)
-2. Создайте свой собственный (или используйте старый) публичный репозиторий на github с произвольным именем.
-3. Скачайте [playbook](./playbook/) из репозитория с домашним заданием и перенесите его в свой репозиторий.
-4. Подготовьте хосты в соответствии с группами из предподготовленного playbook.
+Необходимо уточнить адрес/имя сервера `ansible_host:` в файле `inventory/prod.yml`
 
-## Основная часть
+Работоспобоность проверена на ansible версии:
+```bash
+ansible --version
+ansible [core 2.13.1]
+  config file = None
+  configured module search path = ['/home/bvm/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/local/lib/python3.8/dist-packages/ansible
+  ansible collection location = /home/bvm/.ansible/collections:/usr/share/ansible/collections
+  executable location = /usr/local/bin/ansible
+  python version = 3.8.10 (default, Mar 15 2022, 12:22:08) [GCC 9.4.0]
+  jinja version = 3.1.2
+  libyaml = True
+```
 
-1. Приготовьте свой собственный inventory файл `prod.yml`.
-2. Допишите playbook: нужно сделать ещё один play, который устанавливает и настраивает [vector](https://vector.dev).
-3. При создании tasks рекомендую использовать модули: `get_url`, `template`, `unarchive`, `file`.
-4. Tasks должны: скачать нужной версии дистрибутив, выполнить распаковку в выбранную директорию, установить vector.
-5. Запустите `ansible-lint site.yml` и исправьте ошибки, если они есть.
-6. Попробуйте запустить playbook на этом окружении с флагом `--check`.
-7. Запустите playbook на `prod.yml` окружении с флагом `--diff`. Убедитесь, что изменения на системе произведены.
-8. Повторно запустите playbook с флагом `--diff` и убедитесь, что playbook идемпотентен.
-9. Подготовьте README.md файл по своему playbook. В нём должно быть описано: что делает playbook, какие у него есть параметры и теги.
-10. Готовый playbook выложите в свой репозиторий, поставьте тег `08-ansible-02-playbook` на фиксирующий коммит, в ответ предоставьте ссылку на него.
-
----
-
-### Как оформить ДЗ?
-
-Выполненное домашнее задание пришлите ссылкой на .md-файл в вашем репозитории.
+Запуск осуществляется на окружении prod:
+```bash
+ansible-playbook site.yml -i ./inventory/prod.yml
+```
+###Автор: Vladimir Baksheev
 
 ---
