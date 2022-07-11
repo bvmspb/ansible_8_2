@@ -1,6 +1,6 @@
 ---
 - name: Install Clickhouse
-  hosts: clickhouse
+  hosts: localhost-clickhouse
   handlers:
     - name: Restart clickhouse service
       become: true
@@ -31,11 +31,18 @@
         - clickhouse-client-{{ clickhouse_version }}.deb
         - clickhouse-server-{{ clickhouse_version }}.deb
       notify: Restart clickhouse service
-    - name: Start clickhouse service
-      ansible.builtin.service:
-        name: clickhouse-server.service
-        state: started
+    - name: Clickhouse - create config file (listen on 0.0.0.0 - UNSAFE!)
       become: true
+      ansible.builtin.template:
+        src: templates/clickhouse_server_config.xml.j2
+        dest: /etc/clickhouse-server/config.xml
+        mode: "a+r,u+rw,g+rw"
+      notify: Restart clickhouse service
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+    - name: Pause for 5 seconds for service to restart
+      ansible.builtin.pause:
+        seconds: 5
     - name: Create database
       ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
       register: create_db
@@ -43,34 +50,85 @@
       changed_when: create_db.rc == 0
 
 - name: Install latest Vector
-  hosts: clickhouse
+  hosts: localhost-vector
   handlers:
-    - name: Restart vector service
+    - name: Vector - Restart vector service
       become: true
       ansible.builtin.service:
         name: vector.service
         state: restarted
   tasks:
-    - name: Get vector distribs
+    - name: Vector - Get vector distribs
       block:
-        - name: Get vector distrib
+        - name: Vector - Get vector distrib
           ansible.builtin.get_url:
             url: "https://packages.timber.io/vector/latest/vector_{{ vector_version }}_amd64.deb"
             dest: "./vector-latest.deb"
             mode: "a+rw"
       rescue:
-        - name: Get vector latest distrib
+        - name: Vector - Get vector latest distrib
           ansible.builtin.get_url:
             url: "https://packages.timber.io/vector/latest/vector_latest-1_amd64.deb"
             dest: "./vector-latest.deb"
             mode: "a+rw"
-    - name: Install vector package
+    - name: Vector - Install vector package
       become: true
       ansible.builtin.apt:
         deb: "./vector-latest.deb"
-      notify: Restart vector service
-    - name: Start vector service
-      ansible.builtin.service:
-        name: vector.service
-        state: started
+      notify: Vector - Restart vector service
+    - name: Vector - Flush handlers
+      ansible.builtin.meta: flush_handlers
+    - name: Vector - Pause for 5 seconds for service to restart
+      ansible.builtin.pause:
+        seconds: 5
+
+- name: Install nginx
+  hosts: localhost-lighthouse
+  handlers:
+    - name: reload-nginx
       become: true
+      ansible.builtin.command: nginx -s reload
+  tasks:
+    - name: Nginx - Install nginx
+      become: true
+      ansible.builtin.apt:
+        name: nginx-full
+        state: present
+      notify: reload-nginx
+    - name: Nginx - create config file
+      become: true
+      ansible.builtin.template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+        mode: "a+r,u+rw,g+rw"
+      notify: reload-nginx
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+
+- name: Install lighthouse
+  hosts: localhost-lighthouse
+  handlers:
+    - name: reload-nginx
+      become: true
+      ansible.builtin.command: nginx -s reload
+  pre_tasks:
+    - name: Lighthouse - instal git
+      become: true
+      ansible.builtin.apt:
+        name: git
+        state: present
+  tasks:
+    - name: Lighthouse - get from git
+      ansible.builtin.git:
+        repo: "{{ lighthouse_vcs }}"
+        version: master
+        dest: "{{ lighthouse_location_dir }}"
+    - name: Lighthouse - create config file
+      become: true
+      ansible.builtin.template:
+        src: templates/lighthouse.conf.j2
+        dest: /etc/nginx/sites-available/default
+        mode: "a+r,u+rw,g+rw"
+      notify: reload-nginx
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers

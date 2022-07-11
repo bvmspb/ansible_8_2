@@ -1,6 +1,33 @@
 ---
-clickhouse:
+yc-clickhouse:
   hosts:
     clickhouse-01:
-      ansible_host: ycubuntu
+      ansible_host: ycubuntu-ch
 
+yc-vector:
+  hosts:
+    vector-01:
+      ansible_host: ycubuntu-vector
+
+yc-lighthouse:
+  hosts:
+    lighthouse-01:
+      ansible_host: ycubuntu-lh
+
+localhost-clickhouse:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_host: localhost
+
+localhost-vector:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_host: localhost
+
+localhost-lighthouse:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_host: localhost
