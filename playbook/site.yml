@@ -1,89 +1,16 @@
 ---
 - name: Install Clickhouse
-  hosts: localhost-clickhouse
-  handlers:
-    - name: Restart clickhouse service
-      become: true
-      ansible.builtin.service:
-        name: clickhouse-server.service
-        state: restarted
-  tasks:
-    - name: Get clickhouse distribs
-      block:
-        - name: Get clickhouse distrib
-          ansible.builtin.get_url:
-            url: "https://packages.clickhouse.com/deb/pool/stable/{{ item }}_{{ clickhouse_version }}_all.deb"
-            dest: "./{{ item }}-{{ clickhouse_version }}.deb"
-            mode: "a+rw"
-          with_items: "{{ clickhouse_packages }}"
-      rescue:
-        - name: Get clickhouse distrib
-          ansible.builtin.get_url:
-            url: "https://packages.clickhouse.com/deb/pool/stable/clickhouse-common-static_{{ clickhouse_version }}_amd64.deb"
-            dest: "./clickhouse-common-static-{{ clickhouse_version }}.deb"
-            mode: "a+rw"
-    - name: Install clickhouse packages
-      become: true
-      ansible.builtin.apt:
-        deb: "{{ item }}"
-      with_items:
-        - clickhouse-common-static-{{ clickhouse_version }}.deb
-        - clickhouse-client-{{ clickhouse_version }}.deb
-        - clickhouse-server-{{ clickhouse_version }}.deb
-      notify: Restart clickhouse service
-    - name: Clickhouse - create config file (listen on 0.0.0.0 - UNSAFE!)
-      become: true
-      ansible.builtin.template:
-        src: templates/clickhouse_server_config.xml.j2
-        dest: /etc/clickhouse-server/config.xml
-        mode: "a+r,u+rw,g+rw"
-      notify: Restart clickhouse service
-    - name: Flush handlers
-      ansible.builtin.meta: flush_handlers
-    - name: Pause for 5 seconds for service to restart
-      ansible.builtin.pause:
-        seconds: 5
-    - name: Create database
-      ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
-      register: create_db
-      failed_when: create_db.rc != 0 and create_db.rc !=82
-      changed_when: create_db.rc == 0
+  hosts: yc-clickhouse
+  roles:
+    - clickhouse
 
 - name: Install latest Vector
-  hosts: localhost-vector
-  handlers:
-    - name: Vector - Restart vector service
-      become: true
-      ansible.builtin.service:
-        name: vector.service
-        state: restarted
-  tasks:
-    - name: Vector - Get vector distribs
-      block:
-        - name: Vector - Get vector distrib
-          ansible.builtin.get_url:
-            url: "https://packages.timber.io/vector/latest/vector_{{ vector_version }}_amd64.deb"
-            dest: "./vector-latest.deb"
-            mode: "a+rw"
-      rescue:
-        - name: Vector - Get vector latest distrib
-          ansible.builtin.get_url:
-            url: "https://packages.timber.io/vector/latest/vector_latest-1_amd64.deb"
-            dest: "./vector-latest.deb"
-            mode: "a+rw"
-    - name: Vector - Install vector package
-      become: true
-      ansible.builtin.apt:
-        deb: "./vector-latest.deb"
-      notify: Vector - Restart vector service
-    - name: Vector - Flush handlers
-      ansible.builtin.meta: flush_handlers
-    - name: Vector - Pause for 5 seconds for service to restart
-      ansible.builtin.pause:
-        seconds: 5
+  hosts: yc-vector
+  roles:
+    - vector-role
 
 - name: Install nginx
-  hosts: localhost-lighthouse
+  hosts: yc-lighthouse
   handlers:
     - name: reload-nginx
       become: true
@@ -105,30 +32,16 @@
     - name: Flush handlers
       ansible.builtin.meta: flush_handlers
 
-- name: Install lighthouse
-  hosts: localhost-lighthouse
-  handlers:
-    - name: reload-nginx
-      become: true
-      ansible.builtin.command: nginx -s reload
-  pre_tasks:
-    - name: Lighthouse - instal git
+- name: Install git for lighthouse
+  hosts: yc-lighthouse
+  tasks:
+    - name: Lighthouse - install git
       become: true
       ansible.builtin.apt:
         name: git
         state: present
-  tasks:
-    - name: Lighthouse - get from git
-      ansible.builtin.git:
-        repo: "{{ lighthouse_vcs }}"
-        version: master
-        dest: "{{ lighthouse_location_dir }}"
-    - name: Lighthouse - create config file
-      become: true
-      ansible.builtin.template:
-        src: templates/lighthouse.conf.j2
-        dest: /etc/nginx/sites-available/default
-        mode: "a+r,u+rw,g+rw"
-      notify: reload-nginx
-    - name: Flush handlers
-      ansible.builtin.meta: flush_handlers
+
+- name: Install lighthouse
+  hosts: yc-lighthouse
+  roles:
+    - lighthouse-role

@@ -1,14 +1,8 @@
 ---
-clickhouse_version: "22.3.3.44"
-clickhouse_packages:
-  - clickhouse-client
-  - clickhouse-server
-  - clickhouse-common-static
+clickhouse_version: "latest"
+clickhouse_listen_host:
+  - "::"
 
-vector_version: "0.22.3-1"
-
-
-lighthouse_vcs: http://github.com/VKCOM/lighthouse.git
-lighthouse_location_dir: /tmp/lighthouse
-lighthouse_access_log_name: access
 nginx_user_name: root
+lighthouse_access_log_name: access
+lighthouse_location_dir: /tmp/lighthouse
